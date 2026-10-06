@@ -3,11 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Check once at module load whether the device has a fine pointer (mouse)
-const hasFinePointer =
-  typeof window !== "undefined" &&
-  window.matchMedia("(pointer: fine)").matches;
-
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
@@ -17,7 +12,9 @@ export function CustomCursor() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!hasFinePointer) return;
+    // Check at mount whether the device has a fine pointer (mouse).
+    // Runs identically on the client only — keeps SSR output stable.
+    if (!window.matchMedia("(pointer: fine)").matches) return;
     document.body.classList.add("has-custom-cursor");
 
     const dot = dotRef.current;
@@ -85,8 +82,6 @@ export function CustomCursor() {
       document.body.classList.remove("has-custom-cursor");
     };
   }, []);
-
-  if (!hasFinePointer) return null;
 
   return (
     <>

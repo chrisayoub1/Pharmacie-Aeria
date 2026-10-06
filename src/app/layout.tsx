@@ -17,7 +17,7 @@ const fraunces = Fraunces({
   axes: ["opsz", "SOFT"],
 });
 
-const SITE_URL = "https://pharmacie-aeria.ma";
+const SITE_URL = "https://pharmacieaeria.ma";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
