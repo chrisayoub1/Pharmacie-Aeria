@@ -14,20 +14,58 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Msg = { role: "user" | "bot"; text: string };
 
-const WELCOME: Msg = {
-  role: "bot",
-  text: "Bonjour 👋 Je suis l'assistant virtuel de la Pharmacie Aeria. Comment puis-je vous aider aujourd'hui ?",
+type Lang = "fr" | "en" | "ar";
+
+const WELCOME: Record<Lang, string> = {
+  fr: "Bonjour 👋 Je suis l'assistant virtuel de la Pharmacie Aeria. Comment puis-je vous aider aujourd'hui ?",
+  en: "Hello 👋 I'm the virtual assistant of Pharmacie Aeria. How can I help you today?",
+  ar: "مرحبا 👋 أنا المساعد الافتراضي لصيدلية أيريا. كيف يمكنني مساعدتكم اليوم؟",
 };
 
-const QUICK_PROMPTS = [
-  "Quels sont vos services ?",
-  "Où vous trouver ?",
-  "Conseil soleil & été",
-];
+const QUICK_PROMPTS: Record<Lang, string[]> = {
+  fr: ["Quels sont vos services ?", "Où vous trouver ?", "Comment vous contacter ?"],
+  en: ["What are your services?", "Where can I find you?", "How can I contact you?"],
+  ar: ["ما هي خدماتكم؟", "أين يمكنني أن أجدكم؟", "كيف أتواصل معكم؟"],
+};
+
+const UI_STRINGS: Record<Lang, { suggestions: string; call: string; directions: string; placeholder: string; online: string; errApi: string; errNet: string }> = {
+  fr: {
+    suggestions: "Suggestions",
+    call: "Appeler",
+    directions: "Itinéraire",
+    placeholder: "Écrivez votre message…",
+    online: "En ligne · répond en quelques secondes",
+    errApi: "Désolé, je ne peux pas répondre pour le moment. Appelez-nous au 05 29 12 23 23.",
+    errNet: "Une erreur est survenue. N'hésitez pas à nous appeler au 05 29 12 23 23.",
+  },
+  en: {
+    suggestions: "Suggestions",
+    call: "Call",
+    directions: "Directions",
+    placeholder: "Type your message…",
+    online: "Online · replies in seconds",
+    errApi: "Sorry, I can't answer right now. Please call us at 05 29 12 23 23.",
+    errNet: "Something went wrong. Feel free to call us at 05 29 12 23 23.",
+  },
+  ar: {
+    suggestions: "اقتراحات",
+    call: "اتصال",
+    directions: "الاتجاهات",
+    placeholder: "اكتب رسالتك…",
+    online: "متصل · يرد خلال ثوان",
+    errApi: "عذرا، لا أستطيع الرد الآن. يرجى الاتصال بنا على 05 29 12 23 23.",
+    errNet: "حدث خطأ ما. لا تترددوا في الاتصال بنا على 05 29 12 23 23.",
+  },
+};
+
+const LANG_LABELS: Record<Lang, string> = { fr: "FR", en: "EN", ar: "ع" };
 
 export function Chatbot() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([WELCOME]);
+  const [lang, setLang] = useState<Lang>("fr");
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "bot", text: WELCOME.fr },
+  ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasNew, setHasNew] = useState(true);
@@ -62,7 +100,7 @@ export function Chatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages
-            .filter((m) => m.role !== "bot" || m !== WELCOME)
+            .slice(1) // skip the initial welcome message
             .map((m) => ({
               role: m.role === "bot" ? "assistant" : "user",
               content: m.text,
@@ -70,22 +108,26 @@ export function Chatbot() {
         }),
       });
       const data = await res.json();
-      const reply =
-        data.ok && data.reply
-          ? data.reply
-          : "Désolé, je ne peux pas répondre pour le moment. Appelez-nous au 05 29 12 23 23.";
+      // Follow the language detected by the API for the conversation
+      if (data.lang && data.lang !== lang) setLang(data.lang);
+      const reply = data.ok && data.reply ? data.reply : UI_STRINGS[lang].errApi;
       setMessages((m) => [...m, { role: "bot", text: reply }]);
     } catch {
       setMessages((m) => [
         ...m,
-        {
-          role: "bot",
-          text: "Une erreur est survenue. N'hésitez pas à nous appeler au 05 29 12 23 23.",
-        },
+        { role: "bot", text: UI_STRINGS[lang].errNet },
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Manual language switch: reset the conversation in the chosen language
+  const switchLang = (l: Lang) => {
+    if (l === lang) return;
+    setLang(l);
+    setMessages([{ role: "bot", text: WELCOME[l] }]);
+    setInput("");
   };
 
   return (
@@ -186,8 +228,27 @@ export function Chatbot() {
                 </p>
                 <p className="text-xs text-white/70 flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                  En ligne · répond en quelques secondes
+                  {UI_STRINGS[lang].online}
                 </p>
+              </div>
+              {/* Language switcher */}
+              <div className="flex items-center gap-0.5 rounded-full bg-white/15 p-0.5 ring-1 ring-white/25">
+                {(["fr", "en", "ar"] as Lang[]).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => switchLang(l)}
+                    aria-label={l === "fr" ? "Français" : l === "en" ? "English" : "العربية"}
+                    className={
+                      "rounded-full px-2 py-1 text-[11px] font-semibold transition-colors " +
+                      (lang === l
+                        ? "bg-white text-primary"
+                        : "text-white/75 hover:bg-white/15 hover:text-white")
+                    }
+                  >
+                    {LANG_LABELS[l]}
+                  </button>
+                ))}
               </div>
               <button
                 type="button"
@@ -215,6 +276,7 @@ export function Chatbot() {
                   }
                 >
                   <div
+                    dir="auto"
                     className={
                       m.role === "user"
                         ? "max-w-[80%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm text-white shadow-sm"
@@ -258,10 +320,10 @@ export function Chatbot() {
                   transition={{ delay: 0.3 }}
                   className="space-y-2 pt-1"
                 >
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                    Suggestions
+                  <p dir="auto" className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                    {UI_STRINGS[lang].suggestions}
                   </p>
-                  {QUICK_PROMPTS.map((q) => (
+                  {QUICK_PROMPTS[lang].map((q) => (
                     <button
                       key={q}
                       type="button"
@@ -282,7 +344,7 @@ export function Chatbot() {
                 className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-primary"
               >
                 <Phone className="h-3.5 w-3.5" />
-                Appeler
+                {UI_STRINGS[lang].call}
               </a>
               <a
                 href="https://www.google.com/maps/dir/?api=1&destination=Pharmacie+Aeria+Aeria+Mall+Casablanca"
@@ -291,7 +353,7 @@ export function Chatbot() {
                 className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-primary"
               >
                 <MapPin className="h-3.5 w-3.5" />
-                Itinéraire
+                {UI_STRINGS[lang].directions}
               </a>
             </div>
 
@@ -306,9 +368,10 @@ export function Chatbot() {
               <input
                 ref={inputRef}
                 type="text"
+                dir="auto"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Écrivez votre message…"
+                placeholder={UI_STRINGS[lang].placeholder}
                 disabled={loading}
                 className="flex-1 rounded-full border border-border bg-secondary/50 px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:bg-white"
               />
