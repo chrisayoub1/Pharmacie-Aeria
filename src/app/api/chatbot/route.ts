@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { writeJsonSafe } from "@/lib/data-store";
 
 export const runtime = "nodejs";
+
+// When the bot cannot answer, save the question as a ticket for the admin panel.
+// Best-effort: analytics must never break the chat.
+async function saveTicket(question: string, lang: string) {
+  try {
+    await writeJsonSafe(
+      "tickets.json",
+      (cur: any[]) => {
+        const list = Array.isArray(cur) ? cur : [];
+        list.unshift({
+          id: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+          question: question.slice(0, 500),
+          lang,
+          date: new Date().toISOString(),
+          status: "open",
+        });
+        // keep the 500 most recent tickets
+        if (list.length > 500) list.length = 500;
+        return list;
+      },
+      "chatbot: new unanswered question"
+    );
+  } catch {}
+}
 
 type Lang = "fr" | "en" | "ar";
 
@@ -295,6 +320,7 @@ export async function POST(req: NextRequest) {
     }
 
     const reply = best ? langPack(best).reply() : FALLBACK[lang]();
+    if (!best) await saveTicket(rawQuestion, lang);
     return NextResponse.json({ ok: true, reply, lang });
   } catch {
     return NextResponse.json(

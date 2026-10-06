@@ -3,6 +3,7 @@ import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Preloader } from "@/components/site/preloader";
+import { Tracker } from "@/components/site/tracker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -136,6 +137,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${fraunces.variable} font-sans antialiased bg-background text-foreground`}
       >
+      <Tracker />
         <Preloader />
         {children}
         <Toaster />
