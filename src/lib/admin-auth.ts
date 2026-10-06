@@ -15,7 +15,8 @@ export async function checkCredentials(email: string, password: string): Promise
   if (allowed.length === 0) {
     (process.env.ADMIN_EMAIL || "").split(",").forEach((e) => e.trim() && allowed.push(e.trim().toLowerCase()));
   }
-  return allowed.includes(email.trim().toLowerCase()) && password === expectedPass;
+  const { verifyStoredPassword } = await import("./admin-password");
+  return allowed.includes(email.trim().toLowerCase()) && (await verifyStoredPassword(password));
 }
 
 export async function getSessionEmail(): Promise<string | null> {

@@ -1,83 +1,180 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Lock, Mail, LogIn } from "lucide-react";
+
+type Mode = "login" | "forgot" | "reset";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  const login = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        router.push("/admin");
-      } else {
-        setError(data.error || "Identifiants incorrects.");
-      }
-    } catch {
-      setError("Erreur de connexion.");
-    } finally {
-      setLoading(false);
+    setLoading(true); setError(""); setSuccess("");
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.ok) {
+      window.location.href = "/admin";
+    } else {
+      setError(data.error || "Erreur de connexion.");
+    }
+  };
+
+  const forgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setError(""); setSuccess("");
+    const res = await fetch("/api/admin/forgot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.ok) {
+      setSuccess("Un code de vérification a été envoyé à votre adresse Gmail. Il est valable 10 minutes.");
+      setMode("reset");
+    } else {
+      setError(data.error || "Erreur.");
+    }
+  };
+
+  const reset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setError(""); setSuccess("");
+    const res = await fetch("/api/admin/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, password: newPassword }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.ok) {
+      setSuccess("Mot de passe modifié ! Connectez-vous avec le nouveau mot de passe.");
+      setMode("login");
+      setPassword("");
+    } else {
+      setError(data.error || "Erreur.");
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f4f6f6] px-4">
-      <div className="w-full max-w-sm rounded-3xl border border-border bg-white p-8 shadow-xl">
-        <div className="flex flex-col items-center">
-          <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-border">
-            <Image src="/logo.jpg" alt="Pharmacie Aeria" fill sizes="64px" className="object-contain p-2" />
-          </span>
-          <h1 className="mt-4 text-xl font-semibold text-foreground">Administration</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Pharmacie Aeria · Accès réservé</p>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+        <div className="mb-6 flex items-center justify-center gap-3">
+          <span className="text-2xl font-bold text-[#0f766e]">Pharmacie Aeria</span>
         </div>
-        <form onSubmit={submit} className="mt-8 space-y-4">
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+        {mode === "login" && (
+          <form onSubmit={login} className="space-y-4">
+            <h2 className="text-center text-lg font-semibold text-foreground">Espace administrateur</h2>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm text-foreground outline-none focus:border-primary"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-[#0f766e]"
             />
-          </div>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mot de passe"
-              className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm text-foreground outline-none focus:border-primary"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-[#0f766e]"
             />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f766e] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0d5d56] disabled:opacity-60"
-          >
-            <LogIn className="h-4 w-4" />
-            {loading ? "Connexion…" : "Se connecter"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[#0f766e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-60"
+            >
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("forgot"); setError(""); setSuccess(""); }}
+              className="w-full text-center text-xs text-muted-foreground underline hover:text-[#0f766e]"
+            >
+              Mot de passe oublié ?
+            </button>
+          </form>
+        )}
+
+        {mode === "forgot" && (
+          <form onSubmit={forgot} className="space-y-4">
+            <h2 className="text-center text-lg font-semibold text-foreground">Mot de passe oublié</h2>
+            <p className="text-center text-xs text-muted-foreground">
+              Entrez votre email administrateur. Nous vous enverrons un code sur Gmail.
+            </p>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-[#0f766e]"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[#0f766e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-60"
+            >
+              {loading ? "Envoi..." : "Envoyer le code"}
+            </button>
+            <button type="button" onClick={() => setMode("login")} className="w-full text-center text-xs text-muted-foreground underline hover:text-[#0f766e]">
+              Retour à la connexion
+            </button>
+          </form>
+        )}
+
+        {mode === "reset" && (
+          <form onSubmit={reset} className="space-y-4">
+            <h2 className="text-center text-lg font-semibold text-foreground">Nouveau mot de passe</h2>
+            <p className="text-center text-xs text-muted-foreground">Code envoyé à {email}</p>
+            <input
+              type="text"
+              inputMode="numeric"
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Code à 6 chiffres"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-center text-lg tracking-widest text-foreground outline-none focus:border-[#0f766e]"
+            />
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nouveau mot de passe (8 caractères min.)"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none focus:border-[#0f766e]"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[#0f766e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-60"
+            >
+              {loading ? "Validation..." : "Changer le mot de passe"}
+            </button>
+            <button type="button" onClick={() => setMode("login")} className="w-full text-center text-xs text-muted-foreground underline hover:text-[#0f766e]">
+              Retour à la connexion
+            </button>
+          </form>
+        )}
+
+        {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-2.5 text-center text-xs text-red-700">{error}</p>}
+        {success && <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-2.5 text-center text-xs text-emerald-700">{success}</p>}
       </div>
     </div>
   );

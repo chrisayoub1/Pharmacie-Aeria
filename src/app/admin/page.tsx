@@ -26,6 +26,9 @@ export default function AdminPage() {
   const [me, setMe] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [emailMsg, setEmailMsg] = useState("");
+  const [curPass, setCurPass] = useState("");
+  const [nextPass, setNextPass] = useState("");
+  const [passMsg, setPassMsg] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +90,21 @@ export default function AdminPage() {
       body: JSON.stringify({ email }),
     });
     setAdmins((a) => ({ ...a, extra: a.extra.filter((x) => x !== email) }));
+  };
+  const changePassword = async () => {
+    setPassMsg("");
+    const res = await fetch("/api/admin/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current: curPass, next: nextPass }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setCurPass(""); setNextPass("");
+      setPassMsg("✓ Mot de passe modifié.");
+    } else {
+      setPassMsg(data.error || "Erreur.");
+    }
   };
   const logout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -192,6 +210,37 @@ export default function AdminPage() {
           <TopList title="Langues (30 j)" icon={<Globe className="h-3.5 w-3.5" />} rows={stats?.languages || []} />
           <TopList title="Sources (30 j)" icon={<ExternalLink className="h-3.5 w-3.5" />} rows={stats?.referrers || []} />
           <TopList title="Appareils (30 j)" icon={<Monitor className="h-3.5 w-3.5" />} rows={stats?.devices || []} />
+        </div>
+
+        {/* Change password */}
+        <div className="rounded-2xl border border-border bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <ShieldCheck className="mr-2 inline h-3.5 w-3.5" /> Changer le mot de passe
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="password"
+              value={curPass}
+              onChange={(e) => setCurPass(e.target.value)}
+              placeholder="Mot de passe actuel"
+              className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+            />
+            <input
+              type="password"
+              value={nextPass}
+              onChange={(e) => setNextPass(e.target.value)}
+              placeholder="Nouveau mot de passe (8 min.)"
+              className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+            />
+            <button
+              onClick={changePassword}
+              disabled={!curPass || nextPass.length < 8}
+              className="rounded-xl bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-50"
+            >
+              Modifier
+            </button>
+          </div>
+          {passMsg && <p className="mt-2 text-xs text-muted-foreground">{passMsg}</p>}
         </div>
 
         {/* Authorized accounts */}
