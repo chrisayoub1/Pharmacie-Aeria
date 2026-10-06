@@ -12,6 +12,8 @@ type DayStats = {
   languages: Record<string, number>;
   referrers: Record<string, number>;
   devices: Record<string, number>;
+  secs?: number;
+  ended?: number;
 };
 
 export async function GET() {
@@ -37,11 +39,17 @@ export async function GET() {
   };
 
   const openTickets = tickets.filter((t) => t.status === "open").length;
+  const totalVisitors = days.reduce((a, d) => a + (d.visitors || 0), 0);
+  const totalSecs = last30.reduce((a, d) => a + (d.secs || 0), 0);
+  const totalEnded = last30.reduce((a, d) => a + (d.ended || 0), 0);
+  const avgSeconds = totalEnded > 0 ? Math.round(totalSecs / totalEnded) : 0;
 
   return NextResponse.json({
     ok: true,
     stats: {
       totalViews,
+      totalVisitors,
+      avgSeconds,
       views7,
       views30,
       openTickets,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw, UserPlus, ShieldCheck } from "lucide-react";
+import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw, UserPlus, ShieldCheck, Clock, Star } from "lucide-react";
 
 type Stats = {
   totalViews: number;
@@ -29,14 +29,16 @@ export default function AdminPage() {
   const [curPass, setCurPass] = useState("");
   const [nextPass, setNextPass] = useState("");
   const [passMsg, setPassMsg] = useState("");
+  const [reviews, setReviews] = useState<{ rating: number | null; count: number; updated: string | null; items: { author: string; stars: number; date: string; text: string; reply?: string }[] }>({ rating: null, count: 0, updated: null, items: [] });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, t, e] = await Promise.all([
+      const [s, t, e, rv] = await Promise.all([
         fetch("/api/admin/stats").then((r) => r.json()),
         fetch("/api/admin/tickets").then((r) => r.json()),
         fetch("/api/admin/emails").then((r) => r.json()),
+        fetch("/api/admin/reviews").then((r) => r.json()),
       ]);
       if (s.ok) setStats(s.stats);
       if (t.ok) setTickets(t.tickets);
@@ -44,6 +46,7 @@ export default function AdminPage() {
         setAdmins({ owner: e.owner, extra: e.extra || [] });
         setMe(e.me || e.owner);
       }
+      if (rv.ok) setReviews({ rating: rv.rating ?? null, count: rv.count || 0, updated: rv.updated || null, items: rv.items || [] });
     } finally {
       setLoading(false);
     }
@@ -105,6 +108,13 @@ export default function AdminPage() {
     } else {
       setPassMsg(data.error || "Erreur.");
     }
+  };
+  const fmtDur = (sec: number | undefined) => {
+    if (!sec) return "—";
+    if (sec < 60) return sec + "s";
+    const m = Math.floor(sec / 60);
+    const r = sec % 60;
+    return m + "m " + (r ? r + "s" : "");
   };
   const logout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -180,6 +190,8 @@ export default function AdminPage() {
           <StatTile label="Vues (7 jours)" value={stats?.views7 ?? "—"} icon={<Users className="h-3.5 w-3.5" />} />
           <StatTile label="Vues (30 jours)" value={stats?.views30 ?? "—"} icon={<Eye className="h-3.5 w-3.5" />} />
           <StatTile label="Tickets ouverts" value={stats?.openTickets ?? "—"} icon={<MessageSquare className="h-3.5 w-3.5" />} />
+          <StatTile label="Visiteurs" value={stats?.totalVisitors ?? "—"} icon={<Users className="h-3.5 w-3.5" />} />
+          <StatTile label="Durée moyenne" value={fmtDur(stats?.avgSeconds)} icon={<Clock className="h-3.5 w-3.5" />} />
         </div>
 
         {/* Traffic chart */}
@@ -210,6 +222,46 @@ export default function AdminPage() {
           <TopList title="Langues (30 j)" icon={<Globe className="h-3.5 w-3.5" />} rows={stats?.languages || []} />
           <TopList title="Sources (30 j)" icon={<ExternalLink className="h-3.5 w-3.5" />} rows={stats?.referrers || []} />
           <TopList title="Appareils (30 j)" icon={<Monitor className="h-3.5 w-3.5" />} rows={stats?.devices || []} />
+        </div>
+
+        {/* Google Maps reviews */}
+        <div className="rounded-2xl border border-border bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Star className="mr-2 inline h-3.5 w-3.5 fill-current text-amber-400" /> Avis Google Maps
+            </p>
+            {reviews.rating ? (
+              <p className="text-xs text-muted-foreground">
+                <span className="font-bold text-foreground">{reviews.rating}★</span> · {reviews.count} avis · mis à jour le {reviews.updated}
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-4 space-y-4">
+            {reviews.items.length === 0 && <p className="text-xs text-muted-foreground">Aucun avis chargé.</p>}
+            {reviews.items.map((r, i) => (
+              <div key={i} className="rounded-xl border border-border/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">{r.author}</p>
+                  <p className="text-xs text-amber-500">{"★".repeat(r.stars)}<span className="text-muted-foreground">{"★".repeat(5 - r.stars)}</span></p>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{r.date}</p>
+                <p className="mt-2 text-xs leading-relaxed text-foreground">{r.text}</p>
+                {r.reply && (
+                  <p className="mt-2 rounded-lg bg-[#f0fdfa] p-3 text-xs leading-relaxed text-[#0f766e]">
+                    <span className="font-semibold">Votre réponse :</span> {r.reply}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          <a
+            href="https://www.google.com/maps/place/Pharmacie+Aeria/"
+            target="_blank"
+            rel="noopener"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#0f766e] hover:underline"
+          >
+            Voir tous les avis sur Google Maps <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
 
         {/* Change password */}

@@ -10,14 +10,33 @@ type DayStats = {
   languages: Record<string, number>;
   referrers: Record<string, number>;
   devices: Record<string, number>;
+  secs?: number;
+  ended?: number;
 };
 
 // Very lightweight, cookie-free analytics: one row per day, no PII.
 export async function POST(req: NextRequest) {
   try {
-    const { newVisitor } = await req.json().catch(() => ({}));
+    const { newVisitor, duration } = await req.json().catch(() => ({}));
 
     const day = new Date().toLocaleDateString("sv-SE", { timeZone: "Africa/Casablanca" }); // YYYY-MM-DD
+
+    // Visit duration ping (sent when the visitor leaves the site)
+    if (duration) {
+      const secs = Math.min(Number(duration) || 0, 3600);
+      await writeJsonSafe("traffic.json", (cur: DayStats[]) => {
+        const days = Array.isArray(cur) ? cur : [];
+        let d = days.find((x) => x.date === day);
+        if (!d) {
+          d = { date: day, views: 0, visitors: 0, languages: {}, referrers: {}, devices: {} };
+          days.push(d);
+        }
+        d.secs = (d.secs || 0) + secs;
+        d.ended = (d.ended || 0) + 1;
+        return days;
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     // Derive device / language / referrer from request headers
     const ua = req.headers.get("user-agent") || "";
