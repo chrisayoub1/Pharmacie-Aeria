@@ -24,36 +24,32 @@ export function Contact() {
   const update = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Erreur");
-      }
-      toast({
-        title: "Message envoyé",
-        description:
-          "Merci. Votre message a bien été envoyé à la Pharmacie Aeria.",
-      });
-      setForm({ name: "", email: "", phone: "", message: "" });
-      setDone(true);
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Envoi impossible",
-        description:
-          "Une erreur est survenue. Veuillez réessayer ou nous appeler.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    const lines = [
+      "Bonjour Pharmacie Aeria,",
+      "",
+      `Nom : ${form.name}`,
+      form.email ? `Email : ${form.email}` : "",
+      form.phone ? `Téléphone : ${form.phone}` : "",
+      "",
+      `Message : ${form.message}`,
+    ];
+    const text = encodeURIComponent(
+      lines.filter((l) => l !== "").join("\n")
+    );
+    window.open(
+      `https://wa.me/212529122323?text=${text}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    toast({
+      title: "WhatsApp ouvert",
+      description:
+        "Votre message est prêt. Il ne reste plus qu'à l'envoyer sur WhatsApp.",
+    });
+    setForm({ name: "", email: "", phone: "", message: "" });
+    setDone(true);
   };
 
   return (
@@ -221,7 +217,7 @@ export function Contact() {
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    Envoyer le message
+                    Envoyer sur WhatsApp
                   </>
                 )}
               </Button>
