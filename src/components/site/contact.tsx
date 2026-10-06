@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SocialLinks } from "./social-links";
 import Image from "next/image";
-import { Phone, MapPin, Send, Loader2, CheckCircle2, Lock, Share2 } from "lucide-react";
+import { Phone, MapPin, Send, Loader2, CheckCircle2, Lock, Share2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +40,7 @@ export function Contact() {
       lines.filter((l) => l !== "").join("\n")
     );
     window.open(
-      `https://wa.me/212529122323?text=${text}`,
+      `https://wa.me/212600183078?text=${text}`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -92,6 +92,24 @@ export function Contact() {
                     </p>
                     <p className="font-semibold text-foreground">
                       05 29 12 23 23
+                    </p>
+                  </div>
+                </a>
+                <a
+                  href="https://wa.me/212600183078"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-4 rounded-2xl border border-border bg-white p-4 transition-colors hover:border-[#25D366]/40"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#25D366]/10 text-[#128C7E]">
+                    <MessageCircle className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      WhatsApp
+                    </p>
+                    <p className="font-semibold text-foreground">
+                      06 00 18 30 78
                     </p>
                   </div>
                 </a>

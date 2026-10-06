@@ -30,6 +30,7 @@ async function saveTicket(question: string, lang: string) {
 type Lang = "fr" | "en" | "ar";
 
 const PHONE = "05 29 12 23 23";
+const WHATSAPP = "06 00 18 30 78";
 const ADDRESS_FR = "Aeria Mall, Casablanca 20000, Maroc";
 const ADDRESS_EN = "Aeria Mall, Casablanca 20000, Morocco";
 const ADDRESS_AR = "أيريا مول، الدار البيضاء 20000، المغرب";
@@ -96,17 +97,33 @@ const RULES: Rule[] = [
     fr: {
       kw: ["telephone", "téléphone", "numero", "numéro", "appeler", "appel", "contact", "joindre", "phone", "call"],
       reply: () =>
-        `Vous pouvez joindre la Pharmacie Aeria au ${PHONE}. N'hésitez pas à nous appeler pour toute question sur nos produits ou services.`,
+        `Vous pouvez joindre la Pharmacie Aeria au ${PHONE} ou par WhatsApp au ${WHATSAPP}. N'hésitez pas à nous appeler pour toute question sur nos produits ou services.`,
     },
     en: {
       kw: ["phone", "number", "call", "contact", "reach you", "telephone"],
       reply: () =>
-        `You can reach Pharmacie Aeria at ${PHONE}. Feel free to call us with any question about our products or services.`,
+        `You can reach Pharmacie Aeria at ${PHONE} or on WhatsApp at ${WHATSAPP}. Feel free to contact us with any question about our products or services.`,
     },
     ar: {
       kw: ["رقم", "هاتف", "اتصال", "اتصل", "أتواصل", "كيف نتواصل"],
       reply: () =>
-        `يمكنكم التواصل مع صيدلية أيريا على الرقم ${PHONE}. لا تترددوا في الاتصال بنا لأي سؤال حول منتجاتنا أو خدماتنا.`,
+        `يمكنكم التواصل مع صيدلية أيريا على الرقم ${PHONE} أو عبر واتساب على الرقم ${WHATSAPP}. لا تترددوا في الاتصال بنا لأي سؤال حول منتجاتنا أو خدماتنا.`,
+    },
+  },  {
+    fr: {
+      kw: ["whatsapp", "wa.me", "message"],
+      reply: () =>
+        `Oui ! Vous pouvez nous écrire sur WhatsApp au ${WHATSAPP} : conseils, disponibilité d'un produit ou questions sur vos traitements.`,
+    },
+    en: {
+      kw: ["whatsapp", "wa.me", "text you"],
+      reply: () =>
+        `Yes! You can message us on WhatsApp at ${WHATSAPP} for advice, product availability or any question about your treatments.`,
+    },
+    ar: {
+      kw: ["واتساب", "whatsapp"],
+      reply: () =>
+        `نعم! يمكنكم مراسلتنا عبر واتساب على الرقم ${WHATSAPP} للاستشارة أو معرفة توفر منتج أو أي سؤال حول علاجاتكم.`,
     },
   },
   {
