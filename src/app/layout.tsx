@@ -112,6 +112,11 @@ const jsonLd = {
   },
   areaServed: "Casablanca",
   currenciesAccepted: "MAD",
+  sameAs: [
+    "https://www.instagram.com/pharmacie_aeria/",
+    "https://www.tiktok.com/@pharmacieaeria",
+    "https://www.facebook.com/profile.php?id=100089663596760",
+  ],
 };
 
 export default function RootLayout({

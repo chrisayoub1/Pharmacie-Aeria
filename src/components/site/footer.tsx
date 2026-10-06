@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Phone, MapPin, HeartPulse } from "lucide-react";
+import { SocialLinks } from "./social-links";
 
 const NAV_LINKS = [
   { href: "#accueil", label: "Accueil" },
@@ -53,6 +54,12 @@ export function Footer() {
                 <MapPin className="h-4 w-4 text-teal-300" />
                 Aeria Mall, Casablanca 20000, Maroc
               </p>
+            </div>
+            <div className="mt-7">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                Suivez-nous
+              </p>
+              <SocialLinks className="mt-4 text-white/85 hover:text-teal-300" />
             </div>
           </div>
 

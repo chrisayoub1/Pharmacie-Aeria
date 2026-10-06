@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { SocialLinks } from "./social-links";
 import Image from "next/image";
-import { Phone, MapPin, Send, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Phone, MapPin, Send, Loader2, CheckCircle2, Lock, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -105,6 +106,17 @@ export function Contact() {
                     <p className="font-semibold text-foreground">
                       Aeria Mall, Casablanca 20000, Morocco
                     </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 rounded-2xl border border-border bg-white p-4">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-primary">
+                    <Share2 className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Réseaux sociaux
+                    </p>
+                    <SocialLinks className="mt-1.5 -ml-1 text-primary" />
                   </div>
                 </div>
               </div>
