@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!email || !password) {
       return NextResponse.json({ ok: false, error: "Email et mot de passe requis." }, { status: 400 });
     }
-    if (!checkCredentials(String(email), String(password))) {
+    if (!(await checkCredentials(String(email), String(password)))) {
       return NextResponse.json({ ok: false, error: "Identifiants incorrects." }, { status: 401 });
     }
     const res = NextResponse.json({ ok: true });

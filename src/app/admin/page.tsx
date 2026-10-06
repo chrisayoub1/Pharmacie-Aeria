@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw } from "lucide-react";
+import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw, UserPlus, ShieldCheck } from "lucide-react";
 
 type Stats = {
   totalViews: number;
@@ -22,16 +22,25 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [admins, setAdmins] = useState<{ owner: string; extra: string[] }>({ owner: "", extra: [] });
+  const [me, setMe] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [emailMsg, setEmailMsg] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, t] = await Promise.all([
+      const [s, t, e] = await Promise.all([
         fetch("/api/admin/stats").then((r) => r.json()),
         fetch("/api/admin/tickets").then((r) => r.json()),
+        fetch("/api/admin/emails").then((r) => r.json()),
       ]);
       if (s.ok) setStats(s.stats);
       if (t.ok) setTickets(t.tickets);
+      if (e.ok) {
+        setAdmins({ owner: e.owner, extra: e.extra || [] });
+        setMe(e.me || e.owner);
+      }
     } finally {
       setLoading(false);
     }
@@ -54,6 +63,30 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+  };
+  const addEmail = async () => {
+    setEmailMsg("");
+    const res = await fetch("/api/admin/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newEmail }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setAdmins((a) => ({ ...a, extra: [...a.extra, newEmail.trim().toLowerCase()] }));
+      setNewEmail("");
+      setEmailMsg("✓ Accès ajouté pour " + newEmail.trim().toLowerCase());
+    } else {
+      setEmailMsg(data.error || "Erreur.");
+    }
+  };
+  const removeEmail = async (email: string) => {
+    await fetch("/api/admin/emails", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    setAdmins((a) => ({ ...a, extra: a.extra.filter((x) => x !== email) }));
   };
   const logout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -159,6 +192,49 @@ export default function AdminPage() {
           <TopList title="Langues (30 j)" icon={<Globe className="h-3.5 w-3.5" />} rows={stats?.languages || []} />
           <TopList title="Sources (30 j)" icon={<ExternalLink className="h-3.5 w-3.5" />} rows={stats?.referrers || []} />
           <TopList title="Appareils (30 j)" icon={<Monitor className="h-3.5 w-3.5" />} rows={stats?.devices || []} />
+        </div>
+
+        {/* Authorized accounts */}
+        <div className="rounded-2xl border border-border bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <ShieldCheck className="mr-2 inline h-3.5 w-3.5" /> Comptes autorisés (emails)
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="flex items-center gap-2 rounded-full bg-[#0f766e]/10 px-4 py-2 text-xs font-semibold text-[#0f766e]">
+              <ShieldCheck className="h-3.5 w-3.5" /> {admins.owner} · principal
+            </span>
+            {admins.extra.map((e) => (
+              <span key={e} className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs text-foreground">
+                {e}
+                {me === admins.owner && (
+                  <button onClick={() => removeEmail(e)} aria-label={"Retirer " + e} className="text-muted-foreground hover:text-red-600">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+          {me === admins.owner ? (
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="ajouter@gmail.com"
+                className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <button
+                onClick={addEmail}
+                disabled={!newEmail}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-50"
+              >
+                <UserPlus className="h-4 w-4" /> Ajouter
+              </button>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">Seul le compte principal peut ajouter ou retirer des accès.</p>
+          )}
+          {emailMsg && <p className="mt-2 text-xs text-muted-foreground">{emailMsg}</p>}
         </div>
 
         {/* Tickets */}

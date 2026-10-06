@@ -2,19 +2,20 @@ import { cookies } from "next/headers";
 
 export const COOKIE = "aeria_admin";
 
-export function checkCredentials(email: string, password: string): boolean {
-  // ADMIN_EMAIL can contain several allowed emails, comma-separated.
-  const allowed = (process.env.ADMIN_EMAIL || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+// Allowed emails = owner + extras from admins.json (data repo),
+// with ADMIN_EMAIL env as fallback if the file is missing.
+export async function checkCredentials(email: string, password: string): Promise<boolean> {
   const expectedPass = process.env.ADMIN_PASSWORD || "";
-  return (
-    allowed.length > 0 &&
-    expectedPass.length > 0 &&
-    allowed.includes(email.trim().toLowerCase()) &&
-    password === expectedPass
-  );
+  if (!expectedPass) return false;
+  const { readJson } = await import("./data-store");
+  const admins = await readJson<{ owner: string; extra: string[] }>("admins.json", { owner: "", extra: [] });
+  const allowed = [admins.owner, ...(admins.extra || [])]
+    .filter(Boolean)
+    .map((e) => e.toLowerCase());
+  if (allowed.length === 0) {
+    (process.env.ADMIN_EMAIL || "").split(",").forEach((e) => e.trim() && allowed.push(e.trim().toLowerCase()));
+  }
+  return allowed.includes(email.trim().toLowerCase()) && password === expectedPass;
 }
 
 export async function getSessionEmail(): Promise<string | null> {
