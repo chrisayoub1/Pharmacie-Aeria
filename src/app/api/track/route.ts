@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         d.secs = (d.secs || 0) + secs;
         d.ended = (d.ended || 0) + 1;
         return days;
-      });
+      }, "traffic: visit duration");
       return NextResponse.json({ ok: true });
     }
 
