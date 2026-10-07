@@ -22,7 +22,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [admins, setAdmins] = useState<{ owner: string; extra: string[] }>({ owner: "", extra: [] });
+  const [admins, setAdmins] = useState<{ owner: string; extra: string[]; pending: string[] }>({ owner: "", extra: [], pending: [] });
   const [me, setMe] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [emailMsg, setEmailMsg] = useState("");
@@ -43,7 +43,7 @@ export default function AdminPage() {
       if (s.ok) setStats(s.stats);
       if (t.ok) setTickets(t.tickets);
       if (e.ok) {
-        setAdmins({ owner: e.owner, extra: e.extra || [] });
+        setAdmins({ owner: e.owner, extra: e.extra || [], pending: e.pending || [] });
         setMe(e.me || e.owner);
       }
       if (rv.ok) setReviews({ rating: rv.rating ?? null, count: rv.count || 0, updated: rv.updated || null, items: rv.items || [] });
@@ -79,9 +79,34 @@ export default function AdminPage() {
     });
     const data = await res.json();
     if (data.ok) {
-      setAdmins((a) => ({ ...a, extra: [...a.extra, newEmail.trim().toLowerCase()] }));
+      const clean = newEmail.trim().toLowerCase();
       setNewEmail("");
-      setEmailMsg("✓ Accès ajouté pour " + newEmail.trim().toLowerCase());
+      if (data.pending) {
+        setAdmins((a) => ({ ...a, pending: [...a.pending, clean] }));
+        setEmailMsg("Demande envoyée : " + clean + " doit être approuvé par le compte principal.");
+      } else {
+        setAdmins((a) => ({ ...a, extra: [...a.extra, clean] }));
+        setEmailMsg("✓ Accès ajouté pour " + clean);
+      }
+    } else {
+      setEmailMsg(data.error || "Erreur.");
+    }
+  };
+  const reviewEmail = async (email: string, action: "approve" | "reject") => {
+    const res = await fetch("/api/admin/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, email }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (action === "approve") {
+        setAdmins((a) => ({ owner: a.owner, extra: [...a.extra, email], pending: a.pending.filter((x) => x !== email) }));
+        setEmailMsg("✓ " + email + " approuvé.");
+      } else {
+        setAdmins((a) => ({ ...a, pending: a.pending.filter((x) => x !== email) }));
+        setEmailMsg("Demande refusée pour " + email + ".");
+      }
     } else {
       setEmailMsg(data.error || "Erreur.");
     }
@@ -315,25 +340,50 @@ export default function AdminPage() {
               </span>
             ))}
           </div>
-          {me === admins.owner ? (
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="ajouter@gmail.com"
-                className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
-              />
-              <button
-                onClick={addEmail}
-                disabled={!newEmail}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-50"
-              >
-                <UserPlus className="h-4 w-4" /> Ajouter
-              </button>
+          {admins.pending.length > 0 && me === admins.owner && (
+            <div className="mt-4 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">Demandes en attente d&apos;approbation</p>
+              {admins.pending.map((e) => (
+                <div key={e} className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-foreground">{e}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => reviewEmail(e, "approve")}
+                      className="rounded-lg bg-[#0f766e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d5d56]"
+                    >
+                      ✓ Approuver
+                    </button>
+                    <button
+                      onClick={() => reviewEmail(e, "reject")}
+                      className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:border-red-300 hover:text-red-600"
+                    >
+                      ✗ Refuser
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
+          )}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder={me === admins.owner ? "ajouter@gmail.com" : "proposer@gmail.com"}
+              className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+            />
+            <button
+              onClick={addEmail}
+              disabled={!newEmail}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0d5d56] disabled:opacity-50"
+            >
+              <UserPlus className="h-4 w-4" /> {me === admins.owner ? "Ajouter" : "Proposer"}
+            </button>
+          </div>
+          {me === admins.owner ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">Vous êtes le compte principal : les Gmail que vous ajoutez ont directement accès.</p>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Seul le compte principal peut ajouter ou retirer des accès.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">Toute nouvelle adresse doit être approuvée par {admins.owner} avant d&apos;avoir accès au tableau de bord.</p>
           )}
           {emailMsg && <p className="mt-2 text-xs text-muted-foreground">{emailMsg}</p>}
         </div>
