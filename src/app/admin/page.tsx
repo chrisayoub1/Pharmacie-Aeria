@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw, UserPlus, ShieldCheck, Clock, Star } from "lucide-react";
+import { LogOut, RefreshCw, Eye, Users, MessageSquare, Globe, Monitor, ExternalLink, Check, Trash2, RotateCcw, UserPlus, ShieldCheck, Clock, Star, History } from "lucide-react";
 
 type Stats = {
   totalViews: number;
@@ -23,6 +23,9 @@ export default function AdminPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [admins, setAdmins] = useState<{ owner: string; extra: string[]; pending: string[] }>({ owner: "", extra: [], pending: [] });
+  const [pendingVerified, setPendingVerified] = useState<string[]>([]);
+  const [pendingCodes, setPendingCodes] = useState<Record<string, string>>({});
+  const [logins, setLogins] = useState<{ email: string; at: string; ip: string }[]>([]);
   const [me, setMe] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [emailMsg, setEmailMsg] = useState("");
@@ -44,9 +47,17 @@ export default function AdminPage() {
       if (t.ok) setTickets(t.tickets);
       if (e.ok) {
         setAdmins({ owner: e.owner, extra: e.extra || [], pending: e.pending || [] });
+        setPendingVerified(e.pendingVerified || []);
+        setPendingCodes(e.pendingCodes || {});
         setMe(e.me || e.owner);
       }
       if (rv.ok) setReviews({ rating: rv.rating ?? null, count: rv.count || 0, updated: rv.updated || null, items: rv.items || [] });
+      if (e.me === e.owner) {
+        fetch("/api/admin/logins")
+          .then((r) => r.json())
+          .then((l) => l.ok && setLogins(l.logins || []))
+          .catch(() => {});
+      }
     } finally {
       setLoading(false);
     }
@@ -249,6 +260,26 @@ export default function AdminPage() {
           <TopList title="Appareils (30 j)" icon={<Monitor className="h-3.5 w-3.5" />} rows={stats?.devices || []} />
         </div>
 
+        {/* Recent logins — main admin only */}
+        {me === admins.owner && (
+          <div className="rounded-2xl border border-border bg-white p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <History className="mr-2 inline h-3.5 w-3.5" /> Connexions récentes (tous les comptes)
+            </p>
+            <div className="mt-4 space-y-2">
+              {logins.length === 0 && <p className="text-xs text-muted-foreground">Aucune connexion enregistrée pour l&apos;instant.</p>}
+              {logins.slice(0, 15).map((l, i) => (
+                <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 px-3 py-2">
+                  <p className="text-xs font-medium text-foreground">{l.email}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(l.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} · IP {l.ip}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Google Maps reviews */}
         <div className="rounded-2xl border border-border bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -345,11 +376,24 @@ export default function AdminPage() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">Demandes en attente d&apos;approbation</p>
               {admins.pending.map((e) => (
                 <div key={e} className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-medium text-foreground">{e}</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {e}
+                    {pendingCodes[e] && (
+                      <span className="mt-1 block rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800">
+                        Email non envoyé — transmettez ce code à la personne : <span className="tracking-widest">{pendingCodes[e]}</span>
+                      </span>
+                    )}
+                    {pendingVerified.includes(e) ? (
+                      <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">✓ code vérifié</span>
+                    ) : (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">⏳ code non vérifié</span>
+                    )}
+                  </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => reviewEmail(e, "approve")}
-                      className="rounded-lg bg-[#0f766e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d5d56]"
+                      disabled={!pendingVerified.includes(e)}
+                      className="rounded-lg bg-[#0f766e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d5d56] disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       ✓ Approuver
                     </button>
